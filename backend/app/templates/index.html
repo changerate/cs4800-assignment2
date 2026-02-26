@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>16x16 Grid</title>
+    <title>Parking Wars</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link
       rel="stylesheet"
@@ -30,9 +30,13 @@
             Logout
           </button>
           <div id="authMessage" class="hint"></div>
+          <div id="vehicleSection" class="vehicle-section" style="display: none">
+            <h3>Your vehicle</h3>
+            <div id="vehicleOptions" class="vehicle-options"></div>
+          </div>
         </div>
         <div class="main">
-          <h1>16 x 16 Grid</h1>
+          <h1>Parking Wars</h1>
           <p class="hint">
             You must be logged in to toggle cars on the grid.
           </p>
@@ -46,6 +50,8 @@
       const INITIAL_LOGGED_IN =
         "{{ 'true' if session.get('user_id') else 'false' }}" === "true";
       let isLoggedIn = INITIAL_LOGGED_IN;
+      const VEHICLES = ["🚗", "🛸", "🚀", "✈️", "🚢", "🚁", "🚙", "🚣", "🚂", "🚃", "🚆", "🚋", "🚌", "🚑", "🚒"];
+      let currentVehicle = "🚗";
 
       async function fetchGrid() {
         const res = await fetch("/api/v1/grid");
@@ -74,7 +80,7 @@
         for (let i = 0; i < cells.length; i++) {
           const cell = document.createElement("div");
           cell.className = "cell";
-          cell.textContent = cells[i] ? "🚗" : " ";
+          cell.textContent = cells[i] ? currentVehicle : " ";
           cell.dataset.index = i.toString();
           container.appendChild(cell);
         }
@@ -84,16 +90,58 @@
         const form = document.getElementById("authForm");
         const logoutBtn = document.getElementById("logoutBtn");
         const grid = document.getElementById("grid");
+        const vehicleSection = document.getElementById("vehicleSection");
 
         if (isLoggedIn) {
           form.style.display = "none";
           logoutBtn.style.display = "inline-block";
           grid.classList.remove("grid--disabled");
+          vehicleSection.style.display = "block";
         } else {
           form.style.display = "block";
           logoutBtn.style.display = "none";
           grid.classList.add("grid--disabled");
+          vehicleSection.style.display = "none";
         }
+      }
+
+      function renderVehicleOptions() {
+        const container = document.getElementById("vehicleOptions");
+        container.innerHTML = "";
+
+        VEHICLES.forEach((emoji) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className =
+            "vehicle-option" +
+            (emoji === currentVehicle ? " vehicle-option--selected" : "");
+          btn.textContent = emoji;
+          btn.addEventListener("click", async () => {
+            try {
+              const res = await fetch("/me/vehicle", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ vehicle: emoji }),
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                return;
+              }
+              currentVehicle = data.vehicle || emoji;
+              renderVehicleOptions();
+
+              try {
+                const gridData = await fetchGrid();
+                renderGrid(gridData.cells);
+              } catch (_e) {
+                // ignore
+              }
+            } catch (_e) {
+              // ignore
+            }
+          });
+          container.appendChild(btn);
+        });
       }
 
       async function handleAuthSubmit(event) {
@@ -128,6 +176,7 @@
           }
 
           isLoggedIn = true;
+          currentVehicle = data.vehicle || "🚗";
           authMessage.textContent =
             data.status === "registered"
               ? "Registered and logged in."
@@ -136,6 +185,7 @@
           usernameInput.value = "";
           passwordInput.value = "";
           updateAuthUI();
+          renderVehicleOptions();
 
           try {
             const gridData = await fetchGrid();
@@ -165,6 +215,25 @@
           updateAuthUI();
           authMessage.textContent = "Logged out.";
           logoutBtn.disabled = false;
+        }
+      }
+
+      async function loadCurrentUser() {
+        if (!isLoggedIn) {
+          return;
+        }
+        try {
+          const res = await fetch("/me");
+          if (!res.ok) {
+            return;
+          }
+          const data = await res.json();
+          if (data.vehicle) {
+            currentVehicle = data.vehicle;
+          }
+          renderVehicleOptions();
+        } catch (_e) {
+          // ignore
         }
       }
 
@@ -207,6 +276,7 @@
           .addEventListener("click", handleLogout);
 
         updateAuthUI();
+        loadCurrentUser();
       }
 
       init();

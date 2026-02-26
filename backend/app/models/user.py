@@ -11,6 +11,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
+    vehicle = db.Column(db.String(8), nullable=False, default="🚗")
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,

@@ -58,6 +58,35 @@ body {
   font-size: 0.9rem;
 }
 
+.vehicle-section {
+  margin-top: 0.75rem;
+}
+
+.vehicle-section h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+}
+
+.vehicle-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.vehicle-option {
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+  background: #ffffff;
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.vehicle-option--selected {
+  border-color: #111827;
+  background: #e5e7eb;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(16, 1fr);
@@ -85,5 +114,40 @@ body {
 .hint {
   font-size: 0.85rem;
   color: #555555;
+}
+
+@media (max-width: 768px) {
+  body {
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1rem;
+  }
+
+  .page {
+    width: 100%;
+    text-align: left;
+  }
+
+  .layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sidebar {
+    width: 100%;
+  }
+
+  .main {
+    width: 100%;
+  }
+
+  .grid {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .sidebar button {
+    width: 100%;
+  }
 }
 

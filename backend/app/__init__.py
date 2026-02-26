@@ -56,12 +56,51 @@ def create_app(env: str | None = None) -> Flask:
 
         session["user_id"] = user.id
 
-        return jsonify({"status": status, "username": user.username})
+        # Ensure a default vehicle for older rows without one.
+        if not getattr(user, "vehicle", None):
+            user.vehicle = "🚗"
+            db.session.commit()
+
+        return jsonify({"status": status, "username": user.username, "vehicle": user.vehicle})
 
     @app.post("/logout")
     def logout():
         session.pop("user_id", None)
         return jsonify({"status": "ok"})
+
+    @app.get("/me")
+    def me():
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "unauthorized"}), 401
+
+        user = db.session.get(User, user_id)
+        if not user:
+            return jsonify({"error": "unauthorized"}), 401
+
+        return jsonify({"username": user.username, "vehicle": getattr(user, "vehicle", "🚗")})
+
+    @app.post("/me/vehicle")
+    def update_vehicle():
+        user_id = session.get("user_id")
+        if not user_id:
+            return jsonify({"error": "unauthorized"}), 401
+
+        data = request.get_json(silent=True) or {}
+        vehicle = (data.get("vehicle") or "").strip()
+        allowed = ["🚗", "🛸", "🚀", "✈️", "🚢", "🚁", "🚙", "🚣", "🚂", "🚃", "🚆", "🚋", "🚌", "🚑", "🚒"]
+
+        if vehicle not in allowed:
+            return jsonify({"error": "invalid_vehicle"}), 400
+
+        user = db.session.get(User, user_id)
+        if not user:
+            return jsonify({"error": "unauthorized"}), 401
+
+        user.vehicle = vehicle
+        db.session.commit()
+
+        return jsonify({"vehicle": user.vehicle})
 
     return app
 
