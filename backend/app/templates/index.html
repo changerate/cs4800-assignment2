@@ -78,9 +78,10 @@
         container.innerHTML = "";
 
         for (let i = 0; i < cells.length; i++) {
+          const cellData = cells[i];
           const cell = document.createElement("div");
           cell.className = "cell";
-          cell.textContent = cells[i] ? currentVehicle : " ";
+          cell.textContent = cellData && cellData.vehicle ? cellData.vehicle : " ";
           cell.dataset.index = i.toString();
           container.appendChild(cell);
         }
