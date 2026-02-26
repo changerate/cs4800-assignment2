@@ -52,6 +52,8 @@
       let isLoggedIn = INITIAL_LOGGED_IN;
       const VEHICLES = ["🚗", "🛸", "🚀", "✈️", "🚢", "🚁", "🚙", "🚣", "🚂", "🚃", "🚆", "🚋", "🚌", "🚑", "🚒"];
       let currentVehicle = "🚗";
+      const POLL_INTERVAL_MS = 3000;
+      let gridPollInterval = null;
 
       async function fetchGrid() {
         const res = await fetch("/api/v1/grid");
@@ -87,6 +89,24 @@
         }
       }
 
+      function stopGridPolling() {
+        if (gridPollInterval) {
+          clearInterval(gridPollInterval);
+          gridPollInterval = null;
+        }
+      }
+
+      function startGridPolling() {
+        stopGridPolling();
+        gridPollInterval = setInterval(async () => {
+          if (!isLoggedIn) return;
+          try {
+            const data = await fetchGrid();
+            renderGrid(data.cells);
+          } catch (_e) {}
+        }, POLL_INTERVAL_MS);
+      }
+
       function updateAuthUI() {
         const form = document.getElementById("authForm");
         const logoutBtn = document.getElementById("logoutBtn");
@@ -98,11 +118,13 @@
           logoutBtn.style.display = "inline-block";
           grid.classList.remove("grid--disabled");
           vehicleSection.style.display = "block";
+          startGridPolling();
         } else {
           form.style.display = "block";
           logoutBtn.style.display = "none";
           grid.classList.add("grid--disabled");
           vehicleSection.style.display = "none";
+          stopGridPolling();
         }
       }
 
