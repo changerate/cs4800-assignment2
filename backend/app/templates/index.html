@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>16x16 Grid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+  </head>
+  <body>
+    <div class="page">
+      <div class="layout">
+        <div class="sidebar">
+          <h2>Account</h2>
+          <form id="authForm">
+            <label for="username">Username</label>
+            <input id="username" name="username" autocomplete="username" />
+            <label for="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+            />
+            <button type="submit" id="loginBtn">Login / Register</button>
+          </form>
+          <button type="button" id="logoutBtn" style="display: none">
+            Logout
+          </button>
+          <div id="authMessage" class="hint"></div>
+        </div>
+        <div class="main">
+          <h1>16 x 16 Grid</h1>
+          <p class="hint">
+            You must be logged in to toggle cars on the grid.
+          </p>
+          <div id="grid" class="grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const GRID_SIZE = 16;
+      const INITIAL_LOGGED_IN =
+        "{{ 'true' if session.get('user_id') else 'false' }}" === "true";
+      let isLoggedIn = INITIAL_LOGGED_IN;
+
+      async function fetchGrid() {
+        const res = await fetch("/api/v1/grid");
+        if (!res.ok) {
+          throw new Error("Failed to load grid");
+        }
+        return res.json();
+      }
+
+      async function toggleCell(index) {
+        const res = await fetch("/api/v1/grid/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ index }),
+        });
+        if (!res.ok) {
+          throw new Error("Failed to toggle cell");
+        }
+        return res.json();
+      }
+
+      function renderGrid(cells) {
+        const container = document.getElementById("grid");
+        container.innerHTML = "";
+
+        for (let i = 0; i < cells.length; i++) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          cell.textContent = cells[i] ? "🚗" : " ";
+          cell.dataset.index = i.toString();
+          container.appendChild(cell);
+        }
+      }
+
+      function updateAuthUI() {
+        const form = document.getElementById("authForm");
+        const logoutBtn = document.getElementById("logoutBtn");
+        const grid = document.getElementById("grid");
+
+        if (isLoggedIn) {
+          form.style.display = "none";
+          logoutBtn.style.display = "inline-block";
+          grid.classList.remove("grid--disabled");
+        } else {
+          form.style.display = "block";
+          logoutBtn.style.display = "none";
+          grid.classList.add("grid--disabled");
+        }
+      }
+
+      async function handleAuthSubmit(event) {
+        event.preventDefault();
+        const usernameInput = document.getElementById("username");
+        const passwordInput = document.getElementById("password");
+        const loginBtn = document.getElementById("loginBtn");
+        const authMessage = document.getElementById("authMessage");
+
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!username || !password) {
+          authMessage.textContent = "Username and password are required.";
+          return;
+        }
+
+        authMessage.textContent = "";
+        loginBtn.disabled = true;
+
+        try {
+          const res = await fetch("/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, password }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            authMessage.textContent = data.error || "Login failed.";
+            return;
+          }
+
+          isLoggedIn = true;
+          authMessage.textContent =
+            data.status === "registered"
+              ? "Registered and logged in."
+              : "Logged in.";
+
+          usernameInput.value = "";
+          passwordInput.value = "";
+          updateAuthUI();
+
+          try {
+            const gridData = await fetchGrid();
+            renderGrid(gridData.cells);
+          } catch (_e) {
+            // ignore
+          }
+        } catch (_e) {
+          authMessage.textContent = "Network error.";
+        } finally {
+          loginBtn.disabled = false;
+        }
+      }
+
+      async function handleLogout() {
+        const logoutBtn = document.getElementById("logoutBtn");
+        const authMessage = document.getElementById("authMessage");
+        logoutBtn.disabled = true;
+
+        try {
+          const res = await fetch("/logout", { method: "POST" });
+          await res.json().catch(() => {});
+        } catch (_e) {
+          // ignore
+        } finally {
+          isLoggedIn = false;
+          updateAuthUI();
+          authMessage.textContent = "Logged out.";
+          logoutBtn.disabled = false;
+        }
+      }
+
+      async function init() {
+        try {
+          const data = await fetchGrid();
+          renderGrid(data.cells);
+        } catch (e) {
+          // Grid will stay empty if backend is unreachable.
+          // Requirement says minimal UX; no extra handling here.
+        }
+
+        const container = document.getElementById("grid");
+        container.addEventListener("click", async (event) => {
+          if (!isLoggedIn) {
+            return;
+          }
+
+          const target = event.target;
+          if (!(target instanceof HTMLElement)) return;
+          if (!target.classList.contains("cell")) return;
+
+          const index = Number(target.dataset.index);
+          if (!Number.isInteger(index)) return;
+
+          try {
+            await toggleCell(index);
+            const data = await fetchGrid();
+            renderGrid(data.cells);
+          } catch (e) {
+            // Ignore errors to keep behavior minimal.
+          }
+        });
+
+        document
+          .getElementById("authForm")
+          .addEventListener("submit", handleAuthSubmit);
+        document
+          .getElementById("logoutBtn")
+          .addEventListener("click", handleLogout);
+
+        updateAuthUI();
+      }
+
+      init();
+    </script>
+  </body>
+</html>
+

@@ -1,0 +1,89 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  background: #ffffff;
+}
+
+.page {
+  text-align: center;
+}
+
+.layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+}
+
+.sidebar {
+  min-width: 220px;
+  text-align: left;
+}
+
+.main {
+  flex: 1;
+}
+
+.sidebar form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.sidebar label {
+  font-size: 0.85rem;
+  color: #333333;
+}
+
+.sidebar input {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  font-size: 0.9rem;
+}
+
+.sidebar button {
+  margin-top: 0.5rem;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.9rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  width: min(80vmin, 480px);
+  margin-top: 1rem;
+}
+
+.grid.grid--disabled .cell {
+  cursor: default;
+  opacity: 0.4;
+}
+
+.cell {
+  background: #ffffff;
+  border: 1px solid #cccccc;
+  aspect-ratio: 1 / 1;
+  cursor: pointer;
+}
+
+.cell.active {
+  background: #3377ff;
+}
+
+.hint {
+  font-size: 0.85rem;
+  color: #555555;
+}
+
