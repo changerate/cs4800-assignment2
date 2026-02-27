@@ -86,6 +86,10 @@
 
       function applyLogsFromResponse(data) {
         if (!data || !Array.isArray(data.logs)) return;
+        const list = document.getElementById("userLogList");
+        if (!list) return;
+        // Re-render from server state to avoid duplicates on polling.
+        list.innerHTML = "";
         data.logs.forEach((msg) => appendLog(msg));
       }
 

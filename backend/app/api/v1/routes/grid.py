@@ -6,6 +6,7 @@ from sqlalchemy.exc import OperationalError
 from app.extensions import db
 from app.models.grid_state import GridState
 from app.models.user import User
+from app.models.user_log import UserLog
 
 GRID_SIZE = 10
 GRID_CELL_COUNT = GRID_SIZE * GRID_SIZE
@@ -15,26 +16,49 @@ GRID_STATE_ID = 1
 
 grid_bp = Blueprint("grid", __name__)
 
-# Simple in-memory per-user logs for "towed" notifications.
-# Keys are user ids, values are lists of log message strings.
-USER_LOGS: dict[int, list[str]] = {}
-
 
 def _add_user_log(user_id: int, message: str) -> None:
-    """Append a log message for the given user."""
-    if user_id is None:
+    """Persist a log message for the given user."""
+    if not user_id or not message:
         return
-    USER_LOGS.setdefault(user_id, []).append(message)
+    try:
+        entry = UserLog(user_id=user_id, message=message)
+        db.session.add(entry)
+    except OperationalError:
+        db.session.rollback()
+        db.create_all()
+        try:
+            entry = UserLog(user_id=user_id, message=message)
+            db.session.add(entry)
+        except OperationalError:
+            db.session.rollback()
 
 
-def _drain_user_logs(user_id: int) -> list[str]:
-    """Return and clear any pending log messages for the given user."""
+def _get_user_logs(user_id: int, limit: int = 50) -> list[str]:
+    """Return recent log messages for the given user, newest first."""
     if not user_id:
         return []
-    logs = USER_LOGS.get(user_id) or []
-    if logs:
-        USER_LOGS[user_id] = []
-    return logs
+    try:
+        logs = (
+            UserLog.query.filter_by(user_id=user_id)
+            .order_by(UserLog.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+    except OperationalError:
+        db.session.rollback()
+        db.create_all()
+        try:
+            logs = (
+                UserLog.query.filter_by(user_id=user_id)
+                .order_by(UserLog.created_at.desc())
+                .limit(limit)
+                .all()
+            )
+        except OperationalError:
+            db.session.rollback()
+            return []
+    return [log.message for log in logs]
 
 
 def _unauthorized():
@@ -81,7 +105,7 @@ def get_grid():
     if not user_id:
         return _unauthorized()
     cells = [_serialize_cell(c) for c in _get_cells()]
-    logs = _drain_user_logs(user_id)
+    logs = _get_user_logs(user_id)
     return jsonify({"size": GRID_SIZE, "cells": cells, "logs": logs})
 
 
@@ -108,7 +132,12 @@ def toggle_cell():
     if current is None:
         cells[index] = {"user_id": user_id, "vehicle": user.vehicle}
         row.set_cells(cells)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except OperationalError:
+            db.session.rollback()
+            db.create_all()
+            db.session.commit()
         return jsonify({"index": index, "cell": _serialize_cell(cells[index])})
 
     # If another user removes this vehicle, log it for the original owner.
@@ -123,5 +152,10 @@ def toggle_cell():
 
     cells[index] = None
     row.set_cells(cells)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except OperationalError:
+        db.session.rollback()
+        db.create_all()
+        db.session.commit()
     return jsonify({"index": index, "cell": None})
