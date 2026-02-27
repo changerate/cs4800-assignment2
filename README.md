@@ -1,5 +1,6 @@
 ## CPP Parking Chaos
 *cs4800 assignment 2*
+
 *Cal Poly Pomona, Spring 2026*
 
 This project is a small full‑stack web app where students try to "park" as many vehicles as they can on a shared grid. Everyone sees the same grid in real time, so when someone else parks on top of you it feels like they "towed" your vehicle away.
@@ -14,6 +15,7 @@ The app is intentionally light‑hearted and a bit chaotic, but it is built as a
 - **Goal**: Log in, pick a fun vehicle emoji (🚗, 🛸, 🚀, etc.), and click on cells in the grid to park your vehicle.
 - **Social twist**: Because everyone shares the same grid, other students can overwrite your parking spot; from your perspective, they just "towed" you.
 
+---
 
 ### Mapping to formal homework requirements
 
