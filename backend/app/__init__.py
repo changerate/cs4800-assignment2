@@ -24,7 +24,11 @@ def create_app(env: str | None = None) -> Flask:
 
     @app.get("/")
     def index():
-        return render_template("index.html")
+        user = None
+        user_id = session.get("user_id")
+        if user_id:
+            user = db.session.get(User, user_id)
+        return render_template("index.html", current_user=user)
 
     @app.post("/login")
     def login():

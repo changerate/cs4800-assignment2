@@ -29,10 +29,15 @@
           <button type="button" id="logoutBtn" style="display: none">
             Logout
           </button>
+          <div id="currentUserDisplay" class="hint" style="display: none"></div>
           <div id="authMessage" class="hint"></div>
           <div id="vehicleSection" class="vehicle-section" style="display: none">
             <h3>Your vehicle</h3>
             <div id="vehicleOptions" class="vehicle-options"></div>
+          </div>
+          <div class="Description">
+            <h3>Description</h3>
+            <p>This is a game about parking your vehicle of choice on the grid. You can choose your vehicle from the options.</p>
           </div>
         </div>
         <div class="main">
@@ -49,6 +54,9 @@
       const INITIAL_LOGGED_IN =
         "{{ 'true' if session.get('user_id') else 'false' }}" === "true";
       let isLoggedIn = INITIAL_LOGGED_IN;
+      const INITIAL_USERNAME =
+        {{ (current_user.username if current_user else "")|tojson }};
+      let currentUsername = INITIAL_USERNAME || "";
       const VEHICLES = ["🚗", "🛸", "🚀", "✈️", "🚢", "🚁", "🚙", "🚣", "🚂", "🚃", "🚆", "🚋", "🚌", "🚑", "🚒"];
       let currentVehicle = "🚗";
       const POLL_INTERVAL_MS = 3000;
@@ -140,18 +148,32 @@
         const logoutBtn = document.getElementById("logoutBtn");
         const grid = document.getElementById("grid");
         const vehicleSection = document.getElementById("vehicleSection");
+        const currentUserDisplay = document.getElementById("currentUserDisplay");
 
         if (isLoggedIn) {
           form.style.display = "none";
           logoutBtn.style.display = "inline-block";
           grid.classList.remove("grid--disabled");
           vehicleSection.style.display = "block";
+          if (currentUserDisplay) {
+            if (currentUsername) {
+              currentUserDisplay.style.display = "block";
+              currentUserDisplay.textContent = `Logged in as ${currentUsername}`;
+            } else {
+              currentUserDisplay.style.display = "none";
+              currentUserDisplay.textContent = "";
+            }
+          }
           startGridPolling();
         } else {
           form.style.display = "block";
           logoutBtn.style.display = "none";
           grid.classList.add("grid--disabled");
           vehicleSection.style.display = "none";
+          if (currentUserDisplay) {
+            currentUserDisplay.style.display = "none";
+            currentUserDisplay.textContent = "";
+          }
           stopGridPolling();
         }
       }
@@ -228,6 +250,7 @@
 
           isLoggedIn = true;
           currentVehicle = data.vehicle || "🚗";
+          currentUsername = data.username || username;
           authMessage.textContent =
             data.status === "registered"
               ? "Registered and logged in."
@@ -263,6 +286,7 @@
           // ignore
         } finally {
           isLoggedIn = false;
+          currentUsername = "";
           updateAuthUI();
           authMessage.textContent = "Logged out.";
           logoutBtn.disabled = false;
@@ -279,10 +303,14 @@
             return;
           }
           const data = await res.json();
+          if (data.username) {
+            currentUsername = data.username;
+          }
           if (data.vehicle) {
             currentVehicle = data.vehicle;
           }
           renderVehicleOptions();
+          updateAuthUI();
         } catch (_e) {
           // ignore
         }

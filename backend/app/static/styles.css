@@ -29,6 +29,10 @@ body {
   text-align: left;
 }
 
+.Description {
+  max-width: 20rem;
+}
+
 .main {
   flex: 1;
 }
@@ -72,6 +76,7 @@ body {
   flex-direction: row;
   flex-wrap: wrap;
   gap: 0.3rem;
+  max-width: 20rem;
 }
 
 .vehicle-option {
@@ -141,6 +146,18 @@ body {
 
   .sidebar {
     width: 100%;
+  }
+
+  .Description {
+    max-width: 20rem;
+    margin: 0 auto;
+    padding: 0 1rem;
+    font-size: 0.8rem;
+    color: #555555;
+    text-align: left;
+    line-height: 1.2;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
   }
 
   .main {
