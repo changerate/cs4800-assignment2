@@ -46,7 +46,6 @@
     </div>
 
     <script>
-      const GRID_SIZE = 16;
       const INITIAL_LOGGED_IN =
         "{{ 'true' if session.get('user_id') else 'false' }}" === "true";
       let isLoggedIn = INITIAL_LOGGED_IN;
@@ -75,7 +74,13 @@
         return res.json();
       }
 
-      function renderGrid(cells) {
+      function renderGrid(size, cells) {
+        const gridElement = document.getElementById("grid");
+        GRID_SIZE = size;
+        if (gridElement) {
+          gridElement.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+        }
+
         const container = document.getElementById("grid");
         container.innerHTML = "";
 
@@ -87,6 +92,29 @@
           cell.dataset.index = i.toString();
           container.appendChild(cell);
         }
+        resizeGridToFit();
+      }
+
+      function resizeGridToFit() {
+        const grid = document.getElementById("grid");
+        if (!grid) return;
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+
+        const rect = grid.getBoundingClientRect();
+        const spaceAbove = rect.top;
+        const padding = 16;
+
+        const maxHeightForGrid = Math.max(0, viewportHeight - spaceAbove - padding);
+        const maxSize = Math.min(viewportWidth - 32, maxHeightForGrid);
+
+        if (maxSize <= 0) return;
+
+        const currentWidth = grid.offsetWidth || maxSize;
+        const size = Math.min(currentWidth, maxSize);
+
+        grid.style.width = `${size}px`;
       }
 
       function stopGridPolling() {
@@ -102,7 +130,7 @@
           if (!isLoggedIn) return;
           try {
             const data = await fetchGrid();
-            renderGrid(data.cells);
+            renderGrid(data.size, data.cells);
           } catch (_e) {}
         }, POLL_INTERVAL_MS);
       }
@@ -155,7 +183,7 @@
 
               try {
                 const gridData = await fetchGrid();
-                renderGrid(gridData.cells);
+                renderGrid(gridData.size, gridData.cells);
               } catch (_e) {
                 // ignore
               }
@@ -212,7 +240,7 @@
 
           try {
             const gridData = await fetchGrid();
-            renderGrid(gridData.cells);
+            renderGrid(gridData.size, gridData.cells);
           } catch (_e) {
             // ignore
           }
@@ -263,7 +291,7 @@
       async function init() {
         try {
           const data = await fetchGrid();
-          renderGrid(data.cells);
+          renderGrid(data.size, data.cells);
         } catch (e) {
           // Grid will stay empty if backend is unreachable.
           // Requirement says minimal UX; no extra handling here.
@@ -285,7 +313,7 @@
           try {
             await toggleCell(index);
             const data = await fetchGrid();
-            renderGrid(data.cells);
+            renderGrid(data.size, data.cells);
           } catch (e) {
             // Ignore errors to keep behavior minimal.
           }
@@ -300,6 +328,7 @@
 
         updateAuthUI();
         loadCurrentUser();
+        window.addEventListener("resize", resizeGridToFit);
       }
 
       init();

@@ -7,7 +7,7 @@ from app.extensions import db
 from app.models.grid_state import GridState
 from app.models.user import User
 
-GRID_SIZE = 16
+GRID_SIZE = 10
 GRID_CELL_COUNT = GRID_SIZE * GRID_SIZE
 
 # Singleton row id for grid state
