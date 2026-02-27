@@ -37,7 +37,14 @@
           </div>
           <div class="Description">
             <h3>Description</h3>
-            <p>This is a game about parking your vehicle of choice on the grid. You can choose your vehicle from the options.</p>
+            <p>
+              This is a game about parking your vehicle of choice on the grid.
+              You can choose your vehicle from the options.
+            </p>
+          </div>
+          <div id="userLog" class="user-log">
+            <h3>Log</h3>
+            <ul id="userLogList" class="user-log-list"></ul>
           </div>
         </div>
         <div class="main">
@@ -61,6 +68,26 @@
       let currentVehicle = "🚗";
       const POLL_INTERVAL_MS = 3000;
       let gridPollInterval = null;
+      const MAX_LOG_ENTRIES = 20;
+
+      function appendLog(message) {
+        if (!message) return;
+        const list = document.getElementById("userLogList");
+        if (!list) return;
+        const li = document.createElement("li");
+        li.textContent = message;
+        // Newest entries at the top
+        list.insertBefore(li, list.firstChild);
+
+        while (list.children.length > MAX_LOG_ENTRIES) {
+          list.removeChild(list.lastChild);
+        }
+      }
+
+      function applyLogsFromResponse(data) {
+        if (!data || !Array.isArray(data.logs)) return;
+        data.logs.forEach((msg) => appendLog(msg));
+      }
 
       async function fetchGrid() {
         const res = await fetch("/api/v1/grid");
@@ -139,6 +166,7 @@
           try {
             const data = await fetchGrid();
             renderGrid(data.size, data.cells);
+            applyLogsFromResponse(data);
           } catch (_e) {}
         }, POLL_INTERVAL_MS);
       }
@@ -149,6 +177,7 @@
         const grid = document.getElementById("grid");
         const vehicleSection = document.getElementById("vehicleSection");
         const currentUserDisplay = document.getElementById("currentUserDisplay");
+        const userLog = document.getElementById("userLog");
 
         if (isLoggedIn) {
           form.style.display = "none";
@@ -164,6 +193,9 @@
               currentUserDisplay.textContent = "";
             }
           }
+          if (userLog) {
+            userLog.style.display = "block";
+          }
           startGridPolling();
         } else {
           form.style.display = "block";
@@ -173,6 +205,9 @@
           if (currentUserDisplay) {
             currentUserDisplay.style.display = "none";
             currentUserDisplay.textContent = "";
+          }
+          if (userLog) {
+            userLog.style.display = "none";
           }
           stopGridPolling();
         }
@@ -206,6 +241,7 @@
               try {
                 const gridData = await fetchGrid();
                 renderGrid(gridData.size, gridData.cells);
+                applyLogsFromResponse(gridData);
               } catch (_e) {
                 // ignore
               }
@@ -264,6 +300,7 @@
           try {
             const gridData = await fetchGrid();
             renderGrid(gridData.size, gridData.cells);
+            applyLogsFromResponse(gridData);
           } catch (_e) {
             // ignore
           }
@@ -320,6 +357,7 @@
         try {
           const data = await fetchGrid();
           renderGrid(data.size, data.cells);
+          applyLogsFromResponse(data);
         } catch (e) {
           // Grid will stay empty if backend is unreachable.
           // Requirement says minimal UX; no extra handling here.
@@ -342,6 +380,7 @@
             await toggleCell(index);
             const data = await fetchGrid();
             renderGrid(data.size, data.cells);
+            applyLogsFromResponse(data);
           } catch (e) {
             // Ignore errors to keep behavior minimal.
           }

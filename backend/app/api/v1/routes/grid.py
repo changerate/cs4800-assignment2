@@ -15,6 +15,27 @@ GRID_STATE_ID = 1
 
 grid_bp = Blueprint("grid", __name__)
 
+# Simple in-memory per-user logs for "towed" notifications.
+# Keys are user ids, values are lists of log message strings.
+USER_LOGS: dict[int, list[str]] = {}
+
+
+def _add_user_log(user_id: int, message: str) -> None:
+    """Append a log message for the given user."""
+    if user_id is None:
+        return
+    USER_LOGS.setdefault(user_id, []).append(message)
+
+
+def _drain_user_logs(user_id: int) -> list[str]:
+    """Return and clear any pending log messages for the given user."""
+    if not user_id:
+        return []
+    logs = USER_LOGS.get(user_id) or []
+    if logs:
+        USER_LOGS[user_id] = []
+    return logs
+
 
 def _unauthorized():
     return jsonify({"error": "unauthorized"}), 401
@@ -56,10 +77,12 @@ def _get_cells() -> list[dict | None]:
 
 @grid_bp.get("")
 def get_grid():
-    if not session.get("user_id"):
+    user_id = session.get("user_id")
+    if not user_id:
         return _unauthorized()
     cells = [_serialize_cell(c) for c in _get_cells()]
-    return jsonify({"size": GRID_SIZE, "cells": cells})
+    logs = _drain_user_logs(user_id)
+    return jsonify({"size": GRID_SIZE, "cells": cells, "logs": logs})
 
 
 @grid_bp.post("/toggle")
@@ -87,6 +110,17 @@ def toggle_cell():
         row.set_cells(cells)
         db.session.commit()
         return jsonify({"index": index, "cell": _serialize_cell(cells[index])})
+
+    # If another user removes this vehicle, log it for the original owner.
+    current_user_id = current.get("user_id") if isinstance(current, dict) else None
+    if current_user_id and current_user_id != user_id:
+        towed_user = db.session.get(User, current_user_id)
+        if towed_user:
+            vehicle_emoji = current.get("vehicle") if isinstance(current, dict) else None
+            vehicle_label = vehicle_emoji or "vehicle"
+            message = f"{user.username} towed your {vehicle_label} from its spot!"
+            _add_user_log(towed_user.id, message)
+
     cells[index] = None
     row.set_cells(cells)
     db.session.commit()

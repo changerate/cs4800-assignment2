@@ -33,6 +33,23 @@ body {
   max-width: 20rem;
 }
 
+.user-log {
+  max-width: 20rem;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+}
+
+.user-log-list {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.25rem 0 0;
+}
+
+.user-log-list li {
+  padding: 0.15rem 0;
+  border-bottom: 1px solid #e5e7eb;
+}
+
 .main {
   flex: 1;
 }
